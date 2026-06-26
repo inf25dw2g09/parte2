@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  client:
+    build: .
+    image: task-manager-client:latest
+    container_name: task-manager-client
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000
+    restart: unless-stopped
