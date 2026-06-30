@@ -1,60 +1,75 @@
+import axios from 'axios';
+
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
-function getToken() {
-  return localStorage.getItem('access_token');
-}
+// Instância axios com a URL base da API
+const api = axios.create({ baseURL: BASE_URL });
 
-async function request(method, path, body = null) {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+// Interceptor — injeta o token Bearer em todos os pedidos automaticamente
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) config.headers['Authorization'] = `Bearer ${token}`;
+  return config;
+});
 
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const res = await fetch(`${BASE_URL}${path}`, options);
-
-  if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem('access_token');
-    window.location.href = '/';
-    return;
+// Interceptor — se a API devolver 401/403, limpa a sessão e redireciona
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      localStorage.removeItem('access_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(err);
   }
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || data.error_description || data.error || 'Erro na API');
-  return data;
-}
+);
 
 // ── Auth ──────────────────────────────────────────────
 export const login = (username, password) =>
-  request('POST', '/oauth/token', {
-    grant_type: 'password',
+  api.post('/oauth/token', {
+    grant_type:    'password',
     username,
     password,
-    client_id: 'task-manager-app',
+    client_id:     'task-manager-app',
     client_secret: 'umaia_super_secret_password',
-    scope: 'read write',
-  });
+    scope:         'read write',
+  }).then((r) => r.data);
 
 export const register = (name, email, password) =>
-  request('POST', '/register', { name, email, password });
+  api.post('/register', { name, email, password }).then((r) => r.data);
 
 // ── Users / Me ────────────────────────────────────────
-export const getMe = () => request('GET', '/users/me');
+export const getMe = () =>
+  api.get('/users/me').then((r) => r.data);
+
 export const updateMe = (id, name, email) =>
-  request('PUT', `/users/${id}`, { name, email });
-export const deleteMe = (id) => request('DELETE', `/users/${id}`);
+  api.put(`/users/${id}`, { name, email }).then((r) => r.data);
+
+export const deleteMe = (id) =>
+  api.delete(`/users/${id}`).then((r) => r.data);
 
 // ── Tasks ─────────────────────────────────────────────
-export const getTasks = () => request('GET', '/tasks');
+export const getTasks = () =>
+  api.get('/tasks').then((r) => r.data);
+
 export const createTask = (title, description, status) =>
-  request('POST', '/tasks', { title, description, status });
+  api.post('/tasks', { title, description, status }).then((r) => r.data);
+
 export const updateTask = (id, title, description, status) =>
-  request('PUT', `/tasks/${id}`, { title, description, status });
-export const deleteTask = (id) => request('DELETE', `/tasks/${id}`);
+  api.put(`/tasks/${id}`, { title, description, status }).then((r) => r.data);
+
+export const deleteTask = (id) =>
+  api.delete(`/tasks/${id}`).then((r) => r.data);
 
 // ── Categories ────────────────────────────────────────
-export const getCategories = () => request('GET', '/categories');
-export const createCategory = (name) => request('POST', '/categories', { name });
-export const updateCategory = (id, name) => request('PUT', `/categories/${id}`, { name });
-export const deleteCategory = (id) => request('DELETE', `/categories/${id}`);
+export const getCategories = () =>
+  api.get('/categories').then((r) => r.data);
+
+export const createCategory = (name) =>
+  api.post('/categories', { name }).then((r) => r.data);
+
+export const updateCategory = (id, name) =>
+  api.put(`/categories/${id}`, { name }).then((r) => r.data);
+
+export const deleteCategory = (id) =>
+  api.delete(`/categories/${id}`).then((r) => r.data);

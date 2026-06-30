@@ -1,14 +1,69 @@
-import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import LoginPage from './pages/LoginPage';
-import TasksPage from './pages/TasksPage';
+import ProtectedRoute from './components/routing/ProtectedRoute';
+import { ROUTES } from './constants/routes';
+
+import Home         from './pages/Home';
+import LoginPage    from './pages/LoginPage';
+import TasksPage    from './pages/TasksPage';
 import CategoriesPage from './pages/CategoriesPage';
-import ProfilePage from './pages/ProfilePage';
+import ProfilePage  from './pages/ProfilePage';
+import NotFound     from './pages/NotFound';
+
 import './App.css';
 
-function Shell() {
-  const { user, logout, loading } = useAuth();
-  const [page, setPage] = useState('tasks');
+// Barra lateral — só aparece quando o utilizador está autenticado
+function Sidebar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate(ROUTES.HOME);
+  };
+
+  const navItems = [
+    { to: ROUTES.TASKS,      label: '✅ Tarefas' },
+    { to: ROUTES.CATEGORIES, label: '🏷️ Categorias' },
+    { to: ROUTES.PROFILE,    label: '👤 Perfil' },
+  ];
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <span className="brand-icon">📋</span>
+        <span className="brand-name">TaskManager</span>
+      </div>
+
+      <nav className="sidebar-nav">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="sidebar-footer">
+        <div className="user-info">
+          <div className="user-avatar">{user?.name?.[0]?.toUpperCase()}</div>
+          <div className="user-details">
+            <span className="user-name">{user?.name}</span>
+            <span className="user-email">{user?.email}</span>
+          </div>
+        </div>
+        <button className="btn-logout" onClick={handleLogout}>Sair</button>
+      </div>
+    </aside>
+  );
+}
+
+// Shell principal — layout com sidebar para páginas protegidas
+function AppLayout() {
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,59 +73,56 @@ function Shell() {
     );
   }
 
-  if (!user) return <LoginPage />;
-
-  const navItems = [
-    { id: 'tasks',      label: '✅ Tarefas' },
-    { id: 'categories', label: '🏷️ Categorias' },
-    { id: 'profile',    label: '👤 Perfil' },
-  ];
-
+  // Páginas públicas (sem sidebar)
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <span className="brand-icon">📋</span>
-          <span className="brand-name">TaskManager</span>
-        </div>
+    <Router>
+      <Routes>
+        {/* Rotas públicas */}
+        <Route path={ROUTES.HOME}  element={<Home />} />
+        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
 
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${page === item.id ? 'active' : ''}`}
-              onClick={() => setPage(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        {/* Rotas protegidas — precisam de sessão */}
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path={ROUTES.TASKS}
+            element={
+              <div className="app-shell">
+                <Sidebar />
+                <main className="main-content"><TasksPage /></main>
+              </div>
+            }
+          />
+          <Route
+            path={ROUTES.CATEGORIES}
+            element={
+              <div className="app-shell">
+                <Sidebar />
+                <main className="main-content"><CategoriesPage /></main>
+              </div>
+            }
+          />
+          <Route
+            path={ROUTES.PROFILE}
+            element={
+              <div className="app-shell">
+                <Sidebar />
+                <main className="main-content"><ProfilePage /></main>
+              </div>
+            }
+          />
+        </Route>
 
-        <div className="sidebar-footer">
-          <div className="user-info">
-            <div className="user-avatar">{user.name?.[0]?.toUpperCase()}</div>
-            <div className="user-details">
-              <span className="user-name">{user.name}</span>
-              <span className="user-email">{user.email}</span>
-            </div>
-          </div>
-          <button className="btn-logout" onClick={logout}>Sair</button>
-        </div>
-      </aside>
-
-      <main className="main-content">
-        {page === 'tasks'      && <TasksPage />}
-        {page === 'categories' && <CategoriesPage />}
-        {page === 'profile'    && <ProfilePage />}
-      </main>
-    </div>
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <Shell />
+      <AppLayout />
     </AuthProvider>
   );
 }

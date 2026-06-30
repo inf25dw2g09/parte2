@@ -1,13 +1,17 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { login, register } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getMe } from '../services/api';
+import { ROUTES } from '../constants/routes';
 
 export default function LoginPage() {
   const { setUser } = useAuth();
-  const [mode, setMode]   = useState('login');
-  const [form, setForm]   = useState({ name: '', email: '', password: '' });
-  const [error, setError] = useState('');
+  const navigate    = useNavigate();
+
+  const [mode,    setMode]    = useState('login');
+  const [form,    setForm]    = useState({ name: '', email: '', password: '' });
+  const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,14 +28,14 @@ export default function LoginPage() {
         setUser(me);
       } else {
         await register(form.name, form.email, form.password);
-        // auto-login após registo
         const data = await login(form.email, form.password);
         localStorage.setItem('access_token', data.access_token);
         const me = await getMe();
         setUser(me);
       }
+      navigate(ROUTES.TASKS);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.response?.data?.error_description || err.message);
     } finally {
       setLoading(false);
     }
