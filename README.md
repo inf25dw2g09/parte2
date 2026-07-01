@@ -134,8 +134,8 @@ As rotas privadas são protegidas pelo componente `ProtectedRoute`, que redireci
 
 # Docker
 
-A aplicação utiliza uma arquitetura **multi-container com 3 imagens** publicadas no Docker Hub:
-
+A aplicação utiliza uma arquitetura **multi-container com 3 imagens** publicadas no Docker Hub, no namespace:
+`inf26dw2g09` 
 | Container | Imagem | Descrição |
 |---|---|---|
 | `mysql_db` | `inf26dw2g09/db-task:latest` | Base de dados MySQL 5.7 |
